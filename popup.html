@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Blocker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎯 YouTube Blocker</h1>
+    </header>
+
+    <section class="stats-section">
+      <h2>📊 Статистика</h2>
+      <div class="stat-card">
+        <div class="stat-label">Сегодня на YouTube</div>
+        <div class="stat-value" id="timeToday">0с</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Дней без YouTube</div>
+        <div class="stat-value" id="daysWithout">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Очки силы воли</div>
+        <div class="stat-value" id="score">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Звание</div>
+        <div class="stat-value rank" id="rank">Новичок</div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h2>⚙️ Настройки</h2>
+      
+      <div class="setting-item">
+        <label for="timeLimit">Лимит времени (мин)</label>
+        <input type="number" id="timeLimit" min="5" max="180" value="15">
+      </div>
+
+      <div class="setting-item">
+        <label for="notificationInterval">Напоминать каждые (мин)</label>
+        <input type="number" id="notificationInterval" min="5" max="60" value="15">
+      </div>
+
+      <div class="setting-item checkbox-item">
+        <input type="checkbox" id="enableBlocking">
+        <label for="enableBlocking">Блокировка включена</label>
+      </div>
+
+      <div class="setting-item checkbox-item">
+        <input type="checkbox" id="workingHoursOnly">
+        <label for="workingHoursOnly">Только в рабочее время (9-18)</label>
+      </div>
+
+      <button id="saveSettings" class="btn btn-primary">💾 Сохранить</button>
+    </section>
+
+    <section class="actions-section">
+      <h2>🚀 Действия</h2>
+      <button id="resetStats" class="btn btn-secondary">🔄 Сбросить статистику</button>
+      <button id="panicMode" class="btn btn-danger">🚨 Режим паники (блок на 1 час)</button>
+    </section>
+
+    <footer>
+      <p>v1.0 • Будь сильнее! 💪</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

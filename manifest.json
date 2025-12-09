@@ -1,20 +1,35 @@
 {
   "manifest_version": 3,
   "name": "YouTube Blocker",
-  "version": "1.0",
-  "description": "Предотвращает доступ к YouTube с мотивационными модалками.",
-  "permissions": ["tabs", "scripting"],
+  "version": "2.0",
+  "description": "Предотвращает доступ к YouTube с мотивационными модалками и системой геймификации.",
+  "permissions": ["storage"],
   "host_permissions": ["*://*.youtube.com/*"],
-  "background": {
-    "service_worker": "background.js"
-  },
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],
-      "js": ["content.js"]
+      "js": [
+        "modules/state-manager.js",
+        "modules/gamification.js",
+        "modules/ui-components.js",
+        "modules/notifications.js",
+        "content.js"
+      ],
+      "run_at": "document_end"
     }
   ],
   "action": {
-    "default_title": "YouTube Blocker"
+    "default_popup": "popup.html",
+    "default_title": "YouTube Blocker - Статистика и настройки",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }

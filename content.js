@@ -1,70 +1,109 @@
+// ===== REFACTORED CONTENT SCRIPT =====
+// Использование модульной архитектуры с chrome.storage.sync
+
+// Мотивационные сообщения
 const messages = [
-  "Ты правда уверен, что это нужно?",
+  "ты правда уверен, что это нужно?",
   "А как насчёт твоих целей?",
   "YouTube затягивает... сопротивляйся!",
   "Ты же обещал себе не заходить сюда!",
   "Закрой вкладку и будь молодцом!"
 ];
 
-let i = 0;
-function showModal() {
-  if (i < messages.length) {
-    alert(messages[i]);
-    i++;
-    setTimeout(showModal, 1500);
+// Инициализация
+let sessionStartTime = Date.now();
+
+// Основная функция инициализации
+async function init() {
+  try {
+    // Инициализация значений по умолчанию
+    await StateManager.init();
+    
+    // Проверка режима паники
+    const isPanic = await Notifications.blockPanicMode();
+    if (isPanic) return; // Выход, если режим паники активен
+    
+    // Проверка нового дня
+    await StateManager.checkNewDay();
+    
+    // Проверка дней без YouTube
+    const disciplineReward = await Gamification.checkDaysWithoutYouTube();
+    if (disciplineReward) {
+      UIComponents.showModal('🎉 Поздравляем!', disciplineReward.message, 'success');
+    }
+    
+    // Показать приветственные сообщения
+    await Notifications.showWelcomeMessages(messages);
+    
+    // Создать кнопку закрытия
+    UIComponents.createCloseButton(handleCloseClick);
+    
+    // Запустить проверку времени
+    startTimeTracking();
+    
+    // Обработчик ухода со страницы
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+  } catch (error) {
+    console.error('Ошибка инициализации:', error);
   }
 }
 
-showModal();
-
-// Создание стилей анимации
-const style = document.createElement('style');
-style.textContent = `
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
+// Трекинг времени
+async function startTimeTracking() {
+  setInterval(async () => {
+    try {
+      const result = await Notifications.shouldNotify(sessionStartTime);
+      
+      if (result.shouldNotify) {
+        // Обновляем время
+        await StateManager.updateTime(result.sessionTime);
+        
+        // Показываем уведомление
+        await Notifications.showTimeNotification(result.totalTime, result.sessionTime);
+        
+        // Сбрасываем sessionStartTime для корректного подсчета
+        sessionStartTime = Date.now();
+      }
+    } catch (error) {
+      console.error('Ошибка проверки времени:', error);
+    }
+  }, 60000); // Проверка каждую минуту
 }
-.pulse-button {
-  animation: pulse 1s infinite;
+
+// Обработчик закрытия страницы
+async function handleBeforeUnload() {
+  try {
+    const sessionTime = Date.now() - sessionStartTime;
+    await StateManager.updateTime(sessionTime);
+  } catch (error) {
+    console.error('Ошибка сохранения времени:', error);
+  }
 }
-`;
-document.head.appendChild(style);
 
-// Создание кнопки
-const closeButton = document.createElement("button");
-closeButton.textContent = "Закрыть сайт 💥";
-closeButton.classList.add("pulse-button");
+// Обработчик клика на кнопку закрытия
+async function handleCloseClick() {
+  try {
+    const sessionTime = Date.now() - sessionStartTime;
+    const totalTime = await StateManager.updateTime(sessionTime);
+    
+    const reward = await Gamification.rewardForClosing(totalTime);
+    
+    UIComponents.showModal(
+      '✅ Отличное решение!',
+      `+1 Очко силы! 🏆 Сейчас у тебя ${reward.score} очков.\n⏰ Время на YouTube сегодня: ${UIComponents.formatTime(reward.timeSpent)}\nЗвание: ${reward.rank}`,
+      'success'
+    );
+    
+    setTimeout(() => {
+      window.location.href = "about:blank";
+    }, 2000);
+  } catch (error) {
+    console.error('Ошибка закрытия:', error);
+    window.location.href = "about:blank";
+  }
+}
 
-Object.assign(closeButton.style, {
-  position: "fixed",
-  top: "20px",
-  right: "20px",
-  zIndex: "9999",
-  padding: "10px 20px",
-  backgroundColor: "#ff3333",
-  color: "#fff",
-  border: "none",
-  borderRadius: "5px",
-  cursor: "pointer",
-  fontSize: "16px"
-});
+// Запуск приложения
+init();
 
-document.body.appendChild(closeButton);
-
-// Обработка клика
-closeButton.addEventListener("click", () => {
-  window.location.href = "about:blank";
-});
-
-
-document.body.appendChild(closeButton);
-
-let score = localStorage.getItem("willpowerScore") || 0;
-
-closeButton.addEventListener("click", () => {
-  score++;
-  localStorage.setItem("willpowerScore", score);
-  alert(`+1 Очко силы! 🏆 Сейчас у тебя ${score} очков.`);
-  window.location.href = "about:blank";
-});
