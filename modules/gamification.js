@@ -1,14 +1,23 @@
 // ===== GAMIFICATION MODULE =====
-// Система наград, очков и достижений
+// Система наград, очков и достижений в самурайском стиле
 
 const Gamification = {
-  // Получение звания по очкам
+  // Получение звания по очкам чести
   getRank(score) {
-    if (score < 50) return "Новичок";
-    if (score < 200) return "Боец";
-    if (score < 500) return "Воин дисциплины";
-    if (score < 1000) return "Мастер самоконтроля";
-    return "Легенда силы воли";
+    // Отрицательные звания (путь падения)
+    if (score <= -1001) return "Сэппуку (切腹) — Путь очищения";
+    if (score <= -501) return "Курой Кэнси (黒い剣士) — Тёмный мечник";
+    if (score <= -201) return "Хансэй (反省) — Раскаивающийся";
+    if (score <= -51) return "Ронин (浪人) — Странствующий без чести";
+    if (score < 0) return "Мукэ (無家) — Без дома, без чести";
+    
+    // Положительные звания (путь самурая)
+    if (score < 51) return "Минсэй (ученик)";
+    if (score < 201) return "Сюгёся (практикующий)";
+    if (score < 501) return "Кэнси (мечник)";
+    if (score < 1001) return "Самурай";
+    if (score < 2001) return "Сэнсэй (наставник)";
+    return "Даймё (лорд дисциплины)";
   },
 
   // Награда за дисциплину (день без YouTube)
@@ -19,9 +28,16 @@ const Gamification = {
 
     score += 5; // базовая награда за день
     
+    let bonusMessage = '';
     // Бонусы за достижения
-    if (days % 7 === 0 && days > 0) score += 50; // неделя
-    if (days % 30 === 0 && days > 0) score += 500; // месяц
+    if (days % 7 === 0 && days > 0) {
+      score += 50; // неделя
+      bonusMessage = '\n⚔️ Неделя дисциплины! Твоя воля крепка, как сталь.';
+    }
+    if (days % 30 === 0 && days > 0) {
+      score += 500; // месяц
+      bonusMessage = '\n🏯 Месяц без слабости! Ты достоин звания истинного воина.';
+    }
 
     await chrome.storage.sync.set({ willpowerScore: score });
 
@@ -29,7 +45,7 @@ const Gamification = {
       score,
       days,
       rank: this.getRank(score),
-      message: `🎉 Отлично! Ты держишься уже ${days} дней.\n🏆 Текущее звание: ${this.getRank(score)}\nОчки силы: ${score}`
+      message: `🎌 Твоя честь растёт, воин! ${days} дней на пути самурая.${bonusMessage}\n⚔️ Звание: ${this.getRank(score)}\n🏆 Очки чести: ${score}`
     };
   },
 
@@ -38,18 +54,41 @@ const Gamification = {
     const data = await chrome.storage.sync.get(['willpowerScore']);
     let score = parseInt(data.willpowerScore || '0');
     
-    score = Math.max(0, score - 10); // не меньше нуля
+    score = score - 10; // теперь может быть отрицательным
     
     await chrome.storage.sync.set({
       willpowerScore: score,
       daysWithoutYouTube: 0 // сброс дней
     });
 
+    // Получаем сообщение в зависимости от уровня падения
+    let customMessage = this.getDishonorMessage(score);
+
     return {
       score,
       rank: this.getRank(score),
-      message: `⚠️ Минус 10 очков силы!\n🏆 Текущее звание: ${this.getRank(score)}\nОчки силы: ${score}`
+      message: `⚔️ Ты потерял часть своей чести, воин. (−10 очков)\n🎭 Звание: ${this.getRank(score)}\n🏆 Очки чести: ${score}\n\n${customMessage}`
     };
+  },
+
+  // Получение сообщения о бесчестии в зависимости от уровня
+  getDishonorMessage(score) {
+    if (score <= -1001) {
+      return "💀 Твоя честь полностью потеряна. Остался лишь путь Сэппуку — символ полного падения.\n\n\"Смерть с честью лучше, чем жизнь в позоре.\"";
+    }
+    if (score <= -501) {
+      return "🌑 Тьма поглотила твоё сердце. Ты стал Тёмным мечником, воином без пути.\n\n\"Слабость — это яд, который разрушает воина изнутри.\"";
+    }
+    if (score <= -201) {
+      return "😔 Ты на пути раскаяния. Хансэй — ищущий путь обратно к свету.\n\n\"Каждое падение — это шанс подняться сильнее.\"";
+    }
+    if (score <= -51) {
+      return "🍂 Ты стал Ронином — странствующим воином без господина, утратившим честь.\n\n\"Без чести самурай — лишь тень того, кем он был.\"";
+    }
+    if (score < 0) {
+      return "🏚️ Ты потерял свой дом и честь. Мукэ — воин без корней.\n\n\"Первый шаг к падению — это отказ от дисциплины.\"";
+    }
+    return "\"Путь самурая — это путь постоянной борьбы.\"";
   },
 
   // Награда за закрытие сайта
@@ -70,22 +109,68 @@ const Gamification = {
 
   // Проверка дней без YouTube
   async checkDaysWithoutYouTube() {
-    const data = await chrome.storage.sync.get(['lastVisitDate', 'daysWithoutYouTube']);
+    const data = await chrome.storage.sync.get(['lastVisitDate', 'daysWithoutYouTube', 'lastCheckDate']);
     const todayDate = new Date().toDateString();
     const lastVisitDate = data.lastVisitDate;
+    const lastCheckDate = data.lastCheckDate || todayDate;
     let days = parseInt(data.daysWithoutYouTube || '0');
 
-    if (lastVisitDate !== todayDate) {
-      // Если вчера не было захода — увеличиваем счетчик
-      if (lastVisitDate) {
+    // Проверяем, прошли ли сутки с последней проверки
+    if (lastCheckDate !== todayDate) {
+      // Если последний визит был не сегодня — значит день без YouTube
+      if (lastVisitDate !== todayDate) {
         days++;
-        await chrome.storage.sync.set({ daysWithoutYouTube: days });
-        return await this.rewardDiscipline();
+        await chrome.storage.sync.set({ 
+          daysWithoutYouTube: days,
+          lastCheckDate: todayDate,
+          pendingReward: true // ставим флаг ожидающей награды
+        });
+        
+        // Возвращаем данные награды, но не показываем её здесь
+        const reward = await this.rewardDiscipline();
+        return reward;
       }
-      await chrome.storage.sync.set({ lastVisitDate: todayDate });
+      
+      // Обновляем дату проверки
+      await chrome.storage.sync.set({ lastCheckDate: todayDate });
     }
 
     return null;
+  },
+
+  // Проверка и показ отложенной награды (вызывается на любой странице)
+  async checkAndShowPendingReward() {
+    const data = await chrome.storage.sync.get(['pendingReward', 'daysWithoutYouTube', 'willpowerScore']);
+    
+    if (data.pendingReward) {
+      // Есть ожидающая награда - показываем её
+      const days = parseInt(data.daysWithoutYouTube || '0');
+      const score = parseInt(data.willpowerScore || '0');
+      const rank = this.getRank(score);
+      
+      let bonusMessage = '';
+      if (days % 7 === 0 && days > 0) {
+        bonusMessage = '\n⚔️ Неделя дисциплины! Твоя воля крепка, как сталь.';
+      }
+      if (days % 30 === 0 && days > 0) {
+        bonusMessage = '\n🏯 Месяц без слабости! Ты достоин звания истинного воина.';
+      }
+      
+      const message = `🎌 Твоя честь растёт, воин! ${days} дней на пути самурая.${bonusMessage}\n⚔️ Звание: ${rank}\n🏆 Очки чести: ${score}`;
+      
+      // Сбрасываем флаг награды
+      await chrome.storage.sync.set({ pendingReward: null });
+      
+      return {
+        hasPendingReward: true,
+        message: message,
+        score: score,
+        days: days,
+        rank: rank
+      };
+    }
+    
+    return { hasPendingReward: false };
   }
 };
 

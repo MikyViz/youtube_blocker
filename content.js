@@ -1,13 +1,13 @@
 // ===== REFACTORED CONTENT SCRIPT =====
 // Использование модульной архитектуры с chrome.storage.sync
 
-// Мотивационные сообщения
+// Мотивационные сообщения в самурайском стиле
 const messages = [
-  "ты правда уверен, что это нужно?",
-  "А как насчёт твоих целей?",
-  "YouTube затягивает... сопротивляйся!",
-  "Ты же обещал себе не заходить сюда!",
-  "Закрой вкладку и будь молодцом!"
+  "⚔️ Каждая минута — это битва. Победи её!",
+  "🏯 Закрой вкладку, воин, и укрепи свою честь.",
+  "🎌 Путь самурая требует дисциплины.",
+  "💥 Ты сильнее своих слабостей. Докажи это!",
+  "⛩️ Истинный воин владеет собой."
 ];
 
 // Инициализация
@@ -26,17 +26,20 @@ async function init() {
     // Проверка нового дня
     await StateManager.checkNewDay();
     
-    // Проверка дней без YouTube
-    const disciplineReward = await Gamification.checkDaysWithoutYouTube();
-    if (disciplineReward) {
-      UIComponents.showModal('🎉 Поздравляем!', disciplineReward.message, 'success');
+    // Проверка отложенных наград (показываем на YouTube)
+    const pendingReward = await Gamification.checkAndShowPendingReward();
+    if (pendingReward.hasPendingReward) {
+      await UIComponents.showModal('🎌 Награда самурая!', pendingReward.message, 'success');
     }
     
-    // Показать приветственные сообщения
-    await Notifications.showWelcomeMessages(messages);
+    // Проверка дней без YouTube (начисляем награду, но не показываем)
+    await Gamification.checkDaysWithoutYouTube();
     
     // Создать кнопку закрытия
     UIComponents.createCloseButton(handleCloseClick);
+    
+    // Показать приветственные сообщения
+    await Notifications.showWelcomeMessages(messages);
     
     // Запустить проверку времени
     startTimeTracking();
@@ -51,19 +54,33 @@ async function init() {
 
 // Трекинг времени
 async function startTimeTracking() {
+  // Сохраняем время каждые 10 секунд
+  setInterval(async () => {
+    try {
+      const sessionTime = Date.now() - sessionStartTime;
+      const data = await chrome.storage.sync.get(['youtubeTimeToday']);
+      const currentTotal = data.youtubeTimeToday || 0;
+      
+      // Обновляем общее время
+      await chrome.storage.sync.set({
+        youtubeTimeToday: currentTotal + sessionTime
+      });
+      
+      // Сбрасываем sessionStartTime
+      sessionStartTime = Date.now();
+    } catch (error) {
+      console.error('Ошибка сохранения времени:', error);
+    }
+  }, 10000); // Каждые 10 секунд
+
+  // Проверка на уведомления каждую минуту
   setInterval(async () => {
     try {
       const result = await Notifications.shouldNotify(sessionStartTime);
       
       if (result.shouldNotify) {
-        // Обновляем время
-        await StateManager.updateTime(result.sessionTime);
-        
         // Показываем уведомление
-        await Notifications.showTimeNotification(result.totalTime, result.sessionTime);
-        
-        // Сбрасываем sessionStartTime для корректного подсчета
-        sessionStartTime = Date.now();
+        await Notifications.showTimeNotification(result.totalTime);
       }
     } catch (error) {
       console.error('Ошибка проверки времени:', error);
@@ -75,7 +92,12 @@ async function startTimeTracking() {
 async function handleBeforeUnload() {
   try {
     const sessionTime = Date.now() - sessionStartTime;
-    await StateManager.updateTime(sessionTime);
+    const data = await chrome.storage.sync.get(['youtubeTimeToday']);
+    const currentTotal = data.youtubeTimeToday || 0;
+    
+    await chrome.storage.sync.set({
+      youtubeTimeToday: currentTotal + sessionTime
+    });
   } catch (error) {
     console.error('Ошибка сохранения времени:', error);
   }
@@ -85,13 +107,19 @@ async function handleBeforeUnload() {
 async function handleCloseClick() {
   try {
     const sessionTime = Date.now() - sessionStartTime;
-    const totalTime = await StateManager.updateTime(sessionTime);
+    const data = await chrome.storage.sync.get(['youtubeTimeToday']);
+    const currentTotal = data.youtubeTimeToday || 0;
+    const totalTime = currentTotal + sessionTime;
+    
+    await chrome.storage.sync.set({
+      youtubeTimeToday: totalTime
+    });
     
     const reward = await Gamification.rewardForClosing(totalTime);
     
-    UIComponents.showModal(
-      '✅ Отличное решение!',
-      `+1 Очко силы! 🏆 Сейчас у тебя ${reward.score} очков.\n⏰ Время на YouTube сегодня: ${UIComponents.formatTime(reward.timeSpent)}\nЗвание: ${reward.rank}`,
+    await UIComponents.showModal(
+      '⚔️ Победа над собой!',
+      `Ты победил внутреннего демона!\n\n+1 Очко чести! 🏆\nТвоя честь крепнет, как сталь катаны.\n\n🏯 Очки чести: ${reward.score}\n⏰ Время сегодня: ${UIComponents.formatTime(reward.timeSpent)}\n⚔️ Звание: ${reward.rank}`,
       'success'
     );
     

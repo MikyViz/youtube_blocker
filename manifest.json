@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Blocker",
+  "name": "YouTube Blocker - Путь Самурая",
   "version": "2.0",
-  "description": "Предотвращает доступ к YouTube с мотивационными модалками и системой геймификации.",
-  "permissions": ["storage"],
+  "description": "Укрепи свою честь на пути самурая. Система очков чести и дисциплины.",
+  "permissions": ["storage", "notifications", "alarms"],
   "host_permissions": ["*://*.youtube.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],
@@ -22,14 +25,14 @@
     "default_popup": "popup.html",
     "default_title": "YouTube Blocker - Статистика и настройки",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "icons/16_samurai.png",
+      "48": "icons/48_samurai.png",
+      "128": "icons/128_samurai.png"
     }
   },
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icons/16_samurai.png",
+    "48": "icons/48_samurai.png",
+    "128": "icons/128_samurai.png"
   }
 }

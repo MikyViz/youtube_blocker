@@ -15,11 +15,20 @@ function formatTime(milliseconds) {
 
 // Получение звания
 function getRank(score) {
-  if (score < 50) return "Новичок";
-  if (score < 200) return "Боец";
-  if (score < 500) return "Воин дисциплины";
-  if (score < 1000) return "Мастер самоконтроля";
-  return "Легенда силы воли";
+  // Отрицательные звания (путь падения)
+  if (score <= -1001) return "Сэппуку (切腹)";
+  if (score <= -501) return "Курой Кэнси (黒い剣士)";
+  if (score <= -201) return "Хансэй (反省)";
+  if (score <= -51) return "Ронин (浪人)";
+  if (score < 0) return "Мукэ (無家)";
+  
+  // Положительные звания (путь самурая)
+  if (score < 51) return "Минсэй (ученик)";
+  if (score < 201) return "Сюгёся (практикующий)";
+  if (score < 501) return "Кэнси (мечник)";
+  if (score < 1001) return "Самурай";
+  if (score < 2001) return "Сэнсэй (наставник)";
+  return "Даймё (лорд дисциплины)";
 }
 
 // Загрузка статистики
@@ -32,8 +41,15 @@ async function loadStats() {
       'timeLimit',
       'notificationInterval',
       'enableBlocking',
-      'workingHoursOnly'
+      'workingHoursOnly',
+      'pendingReward'
     ]);
+
+    // Проверка отложенной награды
+    if (result.pendingReward) {
+      // Показываем награду
+      showPendingRewardNotification(result);
+    }
 
     // Обновление статистики
     const timeToday = parseInt(result.youtubeTimeToday || '0');
@@ -42,8 +58,26 @@ async function loadStats() {
 
     document.getElementById('timeToday').textContent = formatTime(timeToday);
     document.getElementById('daysWithout').textContent = daysWithout;
-    document.getElementById('score').textContent = score;
-    document.getElementById('rank').textContent = getRank(score);
+    
+    const scoreElement = document.getElementById('score');
+    scoreElement.textContent = score;
+    
+    // Добавляем класс для отрицательных очков
+    if (score < 0) {
+      scoreElement.classList.add('negative');
+    } else {
+      scoreElement.classList.remove('negative');
+    }
+    
+    const rankElement = document.getElementById('rank');
+    rankElement.textContent = getRank(score);
+    
+    // Добавляем класс для отрицательных званий
+    if (score < 0) {
+      rankElement.classList.add('negative');
+    } else {
+      rankElement.classList.remove('negative');
+    }
 
     // Загрузка настроек
     document.getElementById('timeLimit').value = result.timeLimit || 15;
@@ -53,6 +87,41 @@ async function loadStats() {
   } catch (error) {
     console.error('Ошибка загрузки данных:', error);
   }
+}
+
+// Показ отложенной награды
+async function showPendingRewardNotification(data) {
+  const days = parseInt(data.daysWithoutYouTube || '0');
+  const score = parseInt(data.willpowerScore || '0');
+  
+  let bonusMessage = '';
+  if (days % 7 === 0 && days > 0) {
+    bonusMessage = '\n\n⚔️ Неделя дисциплины! Твоя воля крепка, как сталь.';
+  }
+  if (days % 30 === 0 && days > 0) {
+    bonusMessage = '\n\n🏯 Месяц без слабости! Ты достоин звания истинного воина.';
+  }
+  
+  // Создаем временное уведомление в popup
+  const notification = document.createElement('div');
+  notification.className = 'reward-notification';
+  notification.innerHTML = `
+    <div class="reward-content">
+      <h3>🎌 Награда самурая!</h3>
+      <p>Ты держишься ${days} дней без YouTube!${bonusMessage}</p>
+      <p><strong>⚔️ Звание:</strong> ${getRank(score)}</p>
+      <p><strong>🏆 Очки чести:</strong> ${score}</p>
+      <button id="closeReward" class="btn btn-primary">Принять награду ⚔️</button>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Закрытие уведомления
+  document.getElementById('closeReward').addEventListener('click', async () => {
+    notification.remove();
+    await chrome.storage.sync.set({ pendingReward: null });
+  });
 }
 
 // Сохранение настроек
@@ -106,7 +175,7 @@ document.getElementById('resetStats').addEventListener('click', async () => {
 
 // Режим паники
 document.getElementById('panicMode').addEventListener('click', async () => {
-  if (confirm('🚨 Активировать режим паники? YouTube будет полностью заблокирован на 1 час!')) {
+  if (confirm('⚔️ Активировать режим железной воли?\n\nYouTube будет полностью заблокирован на 1 час!\n\n"Истинный самурай владеет собой в любой ситуации."')) {
     try {
       const panicEndTime = Date.now() + (60 * 60 * 1000); // +1 час
       await chrome.storage.sync.set({
@@ -114,7 +183,7 @@ document.getElementById('panicMode').addEventListener('click', async () => {
         panicEndTime: panicEndTime
       });
       
-      alert('🚨 Режим паники активирован! Блокировка на 1 час.');
+      alert('⚔️ Режим железной воли активирован! Блокировка на 1 час.');
       window.close();
     } catch (error) {
       console.error('Ошибка активации режима паники:', error);

@@ -46,8 +46,7 @@ const Notifications = {
     }
 
     const currentTime = Date.now();
-    const sessionTime = currentTime - sessionStartTime;
-    const totalTime = (settings.youtubeTimeToday || 0) + sessionTime;
+    const totalTime = settings.youtubeTimeToday || 0;
     
     const lastNotification = settings.lastNotificationTime || 0;
     const interval = (settings.notificationInterval || 15) * 60 * 1000; // в миллисекундах
@@ -56,8 +55,7 @@ const Notifications = {
     if (timeSinceLastNotification >= interval) {
       return {
         shouldNotify: true,
-        totalTime,
-        sessionTime
+        totalTime
       };
     }
 
@@ -72,12 +70,12 @@ const Notifications = {
   },
 
   // Показать уведомление о времени
-  async showTimeNotification(totalTime, sessionTime) {
+  async showTimeNotification(totalTime) {
     const formattedTime = UIComponents.formatTime(totalTime);
     
-    UIComponents.showModal(
-      '⏰ Напоминание',
-      `Время на YouTube сегодня: ${formattedTime}\n\nПора заняться чем-то полезным! 💪`,
+    await UIComponents.showModal(
+      '⏰ Путь воина',
+      `Ты уже провёл ${formattedTime} на YouTube.\n\nПуть воина требует дисциплины! 🎌\nКаждая минута — это битва. Победи её! ⚔️`,
       'warning'
     );
 
@@ -86,7 +84,7 @@ const Notifications = {
     
     // Дополнительное toast уведомление
     setTimeout(() => {
-      UIComponents.showToast(`-10 очков! Осталось: ${result.score}`, 'warning');
+      UIComponents.showToast(`Честь потеряна: ${result.score} очков`, 'warning');
     }, 500);
 
     await this.updateLastNotificationTime();
@@ -96,7 +94,7 @@ const Notifications = {
   async showWelcomeMessages(messages) {
     for (let i = 0; i < messages.length; i++) {
       // Показываем модалку и ждем её закрытия
-      await UIComponents.showModal('🚨 Внимание!', messages[i], 'warning');
+      await UIComponents.showModal('🎌 Испытание воина', messages[i], 'warning');
     }
   },
 
@@ -106,8 +104,8 @@ const Notifications = {
     
     if (isPanic) {
       UIComponents.showModal(
-        '🚨 РЕЖИМ ПАНИКИ АКТИВИРОВАН!',
-        'YouTube полностью заблокирован.\n\nСайт будет закрыт через 3 секунды...',
+        '🚨 РЕЖИМ ЖЕЛЕЗНОЙ ВОЛИ',
+        'YouTube полностью заблокирован.\n\n"Истинный самурай владеет собой в любой ситуации."\n\nСайт будет закрыт через 3 секунды...',
         'warning'
       );
 

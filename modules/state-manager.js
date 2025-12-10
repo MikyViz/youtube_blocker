@@ -30,12 +30,14 @@ const StateManager = {
       lastNotificationTime: 0,
       lastYouTubeDate: '',
       lastVisitDate: '',
+      lastCheckDate: new Date().toDateString(), // для проверки наград
       timeLimit: 15,
       notificationInterval: 15,
       enableBlocking: true,
       workingHoursOnly: false,
       panicMode: false,
-      panicEndTime: 0
+      panicEndTime: 0,
+      pendingReward: null // награда, ожидающая показа
     };
 
     const current = await this.get(Object.keys(defaults));
