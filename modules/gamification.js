@@ -24,28 +24,34 @@ const Gamification = {
   async rewardDiscipline() {
     const data = await chrome.storage.sync.get(['willpowerScore', 'daysWithoutYouTube']);
     let score = parseInt(data.willpowerScore || '0');
-    let days = parseInt(data.daysWithoutYouTube || '0');
+    const days = parseInt(data.daysWithoutYouTube || '0');
 
-    score += 5; // базовая награда за день
-    
+    let bonusPoints = 5; // базовая награда за день
     let bonusMessage = '';
+    
     // Бонусы за достижения
-    if (days % 7 === 0 && days > 0) {
-      score += 50; // неделя
-      bonusMessage = '\n⚔️ Неделя дисциплины! Твоя воля крепка, как сталь.';
-    }
     if (days % 30 === 0 && days > 0) {
-      score += 500; // месяц
-      bonusMessage = '\n🏯 Месяц без слабости! Ты достоин звания истинного воина.';
+      bonusPoints += 500; // месяц (проверяем первым, чтобы получить оба бонуса)
+      bonusMessage = '\n🏯 Месяц без слабости! Ты достоин звания истинного воина. (+500 бонус)';
+    }
+    if (days % 7 === 0 && days > 0) {
+      bonusPoints += 50; // неделя
+      if (bonusMessage) {
+        bonusMessage += '\n⚔️ И еще бонус за неделю! (+50 бонус)';
+      } else {
+        bonusMessage = '\n⚔️ Неделя дисциплины! Твоя воля крепка, как сталь. (+50 бонус)';
+      }
     }
 
+    score += bonusPoints;
     await chrome.storage.sync.set({ willpowerScore: score });
 
     return {
       score,
       days,
+      bonusPoints,
       rank: this.getRank(score),
-      message: `🎌 Твоя честь растёт, воин! ${days} дней на пути самурая.${bonusMessage}\n⚔️ Звание: ${this.getRank(score)}\n🏆 Очки чести: ${score}`
+      message: `🎌 Твоя честь растёт, воин! ${days} ${days === 1 ? 'день' : 'дней'} на пути самурая. (+${bonusPoints} очков)${bonusMessage}\n⚔️ Звание: ${this.getRank(score)}\n🏆 Очки чести: ${score}`
     };
   },
 
@@ -111,27 +117,29 @@ const Gamification = {
   async checkDaysWithoutYouTube() {
     const data = await chrome.storage.sync.get(['lastVisitDate', 'daysWithoutYouTube', 'lastCheckDate']);
     const todayDate = new Date().toDateString();
-    const lastVisitDate = data.lastVisitDate;
-    const lastCheckDate = data.lastCheckDate || todayDate;
+    const lastVisitDate = data.lastVisitDate || '';
+    const lastCheckDate = data.lastCheckDate || '';
     let days = parseInt(data.daysWithoutYouTube || '0');
 
     // Проверяем, прошли ли сутки с последней проверки
     if (lastCheckDate !== todayDate) {
-      // Если последний визит был не сегодня — значит день без YouTube
-      if (lastVisitDate !== todayDate) {
+      // Если последний визит был не сегодня (или никогда) — значит день без YouTube
+      if (lastVisitDate !== todayDate && lastVisitDate !== '') {
         days++;
+        
+        // Сначала обновляем дни в storage
         await chrome.storage.sync.set({ 
           daysWithoutYouTube: days,
           lastCheckDate: todayDate,
           pendingReward: true // ставим флаг ожидающей награды
         });
         
-        // Возвращаем данные награды, но не показываем её здесь
+        // Теперь начисляем награду с уже обновленными днями
         const reward = await this.rewardDiscipline();
         return reward;
       }
       
-      // Обновляем дату проверки
+      // Обновляем дату проверки даже если это первый запуск
       await chrome.storage.sync.set({ lastCheckDate: todayDate });
     }
 

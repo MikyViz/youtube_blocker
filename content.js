@@ -35,6 +35,10 @@ async function init() {
     // Проверка дней без YouTube (начисляем награду, но не показываем)
     await Gamification.checkDaysWithoutYouTube();
     
+    // Обновляем дату последнего визита на YouTube
+    const todayDate = new Date().toDateString();
+    await chrome.storage.sync.set({ lastVisitDate: todayDate });
+    
     // Создать кнопку закрытия
     UIComponents.createCloseButton(handleCloseClick);
     
