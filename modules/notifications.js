@@ -32,7 +32,8 @@ const Notifications = {
       'notificationInterval',
       'youtubeTimeToday',
       'enableBlocking',
-      'workingHoursOnly'
+      'workingHoursOnly',
+      'timeLimit'
     ]);
 
     // Проверка, включена ли блокировка
@@ -47,6 +48,7 @@ const Notifications = {
 
     const currentTime = Date.now();
     const totalTime = settings.youtubeTimeToday || 0;
+    const timeLimit = (settings.timeLimit || 15) * 60 * 1000; // лимит в миллисекундах
     
     const lastNotification = settings.lastNotificationTime || 0;
     const interval = (settings.notificationInterval || 15) * 60 * 1000; // в миллисекундах
@@ -55,7 +57,8 @@ const Notifications = {
     if (timeSinceLastNotification >= interval) {
       return {
         shouldNotify: true,
-        totalTime
+        totalTime,
+        isOverLimit: totalTime > timeLimit
       };
     }
 
@@ -70,22 +73,32 @@ const Notifications = {
   },
 
   // Показать уведомление о времени
-  async showTimeNotification(totalTime) {
+  async showTimeNotification(totalTime, isOverLimit) {
     const formattedTime = UIComponents.formatTime(totalTime);
     
-    await UIComponents.showModal(
-      '⏰ Путь воина',
-      `Ты уже провёл ${formattedTime} на YouTube.\n\nПуть воина требует дисциплины! 🎌\nКаждая минута — это битва. Победи её! ⚔️`,
-      'warning'
-    );
+    if (isOverLimit) {
+      // Если превышен лимит - показываем предупреждение и штрафуем
+      await UIComponents.showModal(
+        '⚠️ Лимит превышен!',
+        `Ты уже провёл ${formattedTime} на YouTube.\n\nПуть воина требует дисциплины! 🎌\nТы превысил свой лимит. Честь потеряна! ⚔️`,
+        'warning'
+      );
 
-    // Наказание за продолжительный просмотр
-    const result = await Gamification.punishForYouTube();
-    
-    // Дополнительное toast уведомление
-    setTimeout(() => {
-      UIComponents.showToast(`Честь потеряна: ${result.score} очков`, 'warning');
-    }, 500);
+      // Наказание за превышение лимита
+      const result = await Gamification.punishForYouTube();
+      
+      // Дополнительное toast уведомление
+      setTimeout(() => {
+        UIComponents.showToast(`Честь потеряна: ${result.score} очков`, 'warning');
+      }, 500);
+    } else {
+      // Если лимит не превышен - просто напоминание без штрафа
+      await UIComponents.showModal(
+        '⏰ Путь воина',
+        `Ты уже провёл ${formattedTime} на YouTube.\n\nПуть воина требует дисциплины! 🎌\nКаждая минута — это битва. Победи её! ⚔️\n\n💪 Ты пока в пределах лимита. Продолжай держаться!`,
+        'info'
+      );
+    }
 
     await this.updateLastNotificationTime();
   },

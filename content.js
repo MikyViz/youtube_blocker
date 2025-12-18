@@ -32,12 +32,8 @@ async function init() {
       await UIComponents.showModal('🎌 Награда самурая!', pendingReward.message, 'success');
     }
     
-    // Проверка дней без YouTube (начисляем награду, но не показываем)
-    await Gamification.checkDaysWithoutYouTube();
-    
-    // Обновляем дату последнего визита на YouTube
-    const todayDate = new Date().toDateString();
-    await chrome.storage.sync.set({ lastVisitDate: todayDate });
+    // Сбрасываем счётчик дней при посещении YouTube (без штрафа)
+    await Gamification.resetDaysWithoutYouTube();
     
     // Создать кнопку закрытия
     UIComponents.createCloseButton(handleCloseClick);
@@ -83,8 +79,8 @@ async function startTimeTracking() {
       const result = await Notifications.shouldNotify(sessionStartTime);
       
       if (result.shouldNotify) {
-        // Показываем уведомление
-        await Notifications.showTimeNotification(result.totalTime);
+        // Показываем уведомление с учётом превышения лимита
+        await Notifications.showTimeNotification(result.totalTime, result.isOverLimit);
       }
     } catch (error) {
       console.error('Ошибка проверки времени:', error);

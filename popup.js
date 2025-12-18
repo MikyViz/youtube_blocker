@@ -34,6 +34,18 @@ function getRank(score) {
 // Загрузка статистики
 async function loadStats() {
   try {
+    // Проверка и обнуление счётчика при смене даты
+    const today = new Date().toDateString();
+    const dateCheck = await chrome.storage.sync.get(['lastYouTubeDate', 'youtubeTimeToday']);
+    
+    if (dateCheck.lastYouTubeDate !== today && dateCheck.lastYouTubeDate) {
+      // Новый день - обнуляем счётчик
+      await chrome.storage.sync.set({
+        youtubeTimeToday: 0,
+        lastYouTubeDate: today
+      });
+    }
+    
     const result = await chrome.storage.sync.get([
       'youtubeTimeToday',
       'daysWithoutYouTube',
@@ -102,6 +114,12 @@ async function showPendingRewardNotification(data) {
     bonusMessage = '\n\n🏯 Месяц без слабости! Ты достоин звания истинного воина.';
   }
   
+  // Удаляем старое уведомление, если оно есть
+  const oldNotification = document.querySelector('.reward-notification');
+  if (oldNotification) {
+    oldNotification.remove();
+  }
+  
   // Создаем временное уведомление в popup
   const notification = document.createElement('div');
   notification.className = 'reward-notification';
@@ -117,10 +135,14 @@ async function showPendingRewardNotification(data) {
   
   document.body.appendChild(notification);
   
-  // Закрытие уведомления
-  document.getElementById('closeReward').addEventListener('click', async () => {
-    notification.remove();
-    await chrome.storage.sync.set({ pendingReward: null });
+  // Закрытие уведомления - используем делегирование событий
+  notification.addEventListener('click', async (e) => {
+    if (e.target.id === 'closeReward' || e.target.closest('#closeReward')) {
+      console.log('Закрываем награду...');
+      notification.remove();
+      await chrome.storage.sync.set({ pendingReward: null });
+      console.log('Награда закрыта');
+    }
   });
 }
 

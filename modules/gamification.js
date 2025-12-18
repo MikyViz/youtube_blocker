@@ -27,7 +27,7 @@ const Gamification = {
     const days = parseInt(data.daysWithoutYouTube || '0');
 
     let bonusPoints = 5; // базовая награда за день
-    let bonusMessage = '';
+    let bonusMessage = '\n💪 Продолжай свой путь, воин! Дисциплина — твоя сила.';
     
     // Бонусы за достижения
     if (days % 30 === 0 && days > 0) {
@@ -55,16 +55,24 @@ const Gamification = {
     };
   },
 
-  // Наказание за просмотр YouTube
+  // Сброс дней без YouTube (без штрафа, просто обнуление счётчика)
+  async resetDaysWithoutYouTube() {
+    await chrome.storage.sync.set({
+      daysWithoutYouTube: 0,
+      lastVisitDate: new Date().toDateString()
+    });
+  },
+
+  // Наказание за превышение лимита времени на YouTube
   async punishForYouTube() {
     const data = await chrome.storage.sync.get(['willpowerScore']);
     let score = parseInt(data.willpowerScore || '0');
     
-    score = score - 10; // теперь может быть отрицательным
+    score = score - 10; // штраф за превышение лимита
     
     await chrome.storage.sync.set({
       willpowerScore: score,
-      daysWithoutYouTube: 0 // сброс дней
+      daysWithoutYouTube: 0 // сброс дней при превышении лимита
     });
 
     // Получаем сообщение в зависимости от уровня падения
@@ -113,7 +121,7 @@ const Gamification = {
     };
   },
 
-  // Проверка дней без YouTube
+  // Проверка дней без YouTube (автоматическое начисление наград)
   async checkDaysWithoutYouTube() {
     const data = await chrome.storage.sync.get(['lastVisitDate', 'daysWithoutYouTube', 'lastCheckDate']);
     const todayDate = new Date().toDateString();
@@ -121,25 +129,58 @@ const Gamification = {
     const lastCheckDate = data.lastCheckDate || '';
     let days = parseInt(data.daysWithoutYouTube || '0');
 
-    // Проверяем, прошли ли сутки с последней проверки
+    // Проверяем, прошёл ли новый день с последней проверки
     if (lastCheckDate !== todayDate) {
-      // Если последний визит был не сегодня (или никогда) — значит день без YouTube
-      if (lastVisitDate !== todayDate && lastVisitDate !== '') {
-        days++;
+      // Вычисляем количество дней с последнего посещения YouTube
+      if (lastVisitDate && lastVisitDate !== '') {
+        const lastVisit = new Date(lastVisitDate);
+        const today = new Date(todayDate);
+        const daysDiff = Math.floor((today - lastVisit) / (1000 * 60 * 60 * 24));
         
-        // Сначала обновляем дни в storage
-        await chrome.storage.sync.set({ 
-          daysWithoutYouTube: days,
-          lastCheckDate: todayDate,
-          pendingReward: true // ставим флаг ожидающей награды
-        });
-        
-        // Теперь начисляем награду с уже обновленными днями
-        const reward = await this.rewardDiscipline();
-        return reward;
+        // Если прошёл хотя бы один день с последнего посещения
+        if (daysDiff > 0) {
+          // Увеличиваем счётчик дней
+          days = parseInt(data.daysWithoutYouTube || '0') + daysDiff;
+          
+          // Обновляем дни в storage
+          await chrome.storage.sync.set({ 
+            daysWithoutYouTube: days,
+            lastCheckDate: todayDate,
+            pendingReward: true // ставим флаг ожидающей награды
+          });
+          
+          // Начисляем награду за каждый пропущенный день
+          let totalPoints = 0;
+          for (let i = 1; i <= daysDiff; i++) {
+            const currentDay = days - daysDiff + i;
+            let bonusPoints = 5; // базовая награда
+            
+            // Проверяем бонусы для каждого дня
+            if (currentDay % 30 === 0 && currentDay > 0) {
+              bonusPoints += 500; // месяц
+            }
+            if (currentDay % 7 === 0 && currentDay > 0) {
+              bonusPoints += 50; // неделя
+            }
+            
+            totalPoints += bonusPoints;
+          }
+          
+          // Обновляем общие очки
+          const currentScore = parseInt(data.willpowerScore || '0');
+          await chrome.storage.sync.set({ willpowerScore: currentScore + totalPoints });
+          
+          return {
+            days,
+            totalPoints,
+            daysDiff,
+            score: currentScore + totalPoints,
+            rank: this.getRank(currentScore + totalPoints)
+          };
+        }
       }
       
-      // Обновляем дату проверки даже если это первый запуск
+      // Обновляем дату проверки
       await chrome.storage.sync.set({ lastCheckDate: todayDate });
     }
 
