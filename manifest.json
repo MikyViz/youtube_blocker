@@ -5,6 +5,12 @@
   "description": "Укрепи свою честь на пути самурая. Система очков чести и дисциплины.",
   "permissions": ["storage", "notifications", "alarms"],
   "host_permissions": ["*://*.youtube.com/*"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "youtube-blocker-samurai@mikyviz",
+      "strict_min_version": "109.0"
+    }
+  },
   "background": {
     "scripts": ["background.js"]
   },
