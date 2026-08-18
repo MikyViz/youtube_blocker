@@ -57,9 +57,10 @@ const Gamification = {
 
   // Сброс дней без YouTube (без штрафа, просто обнуление счётчика)
   async resetDaysWithoutYouTube() {
+    const todayDate = new Date().toDateString();
     await chrome.storage.sync.set({
       daysWithoutYouTube: 0,
-      lastVisitDate: new Date().toDateString()
+      lastVisitDate: todayDate // Сохраняем дату ПОСЕЩЕНИЯ YouTube
     });
   },
 
@@ -123,11 +124,10 @@ const Gamification = {
 
   // Проверка дней без YouTube (автоматическое начисление наград)
   async checkDaysWithoutYouTube() {
-    const data = await chrome.storage.sync.get(['lastVisitDate', 'daysWithoutYouTube', 'lastCheckDate']);
+    const data = await chrome.storage.sync.get(['lastVisitDate', 'lastCheckDate', 'willpowerScore']);
     const todayDate = new Date().toDateString();
     const lastVisitDate = data.lastVisitDate || '';
     const lastCheckDate = data.lastCheckDate || '';
-    let days = parseInt(data.daysWithoutYouTube || '0');
 
     // Проверяем, прошёл ли новый день с последней проверки
     if (lastCheckDate !== todayDate) {
@@ -139,8 +139,8 @@ const Gamification = {
         
         // Если прошёл хотя бы один день с последнего посещения
         if (daysDiff > 0) {
-          // Увеличиваем счётчик дней
-          days = parseInt(data.daysWithoutYouTube || '0') + daysDiff;
+          // Дни без YouTube = количество дней С последнего посещения
+          const days = daysDiff;
           
           // Обновляем дни в storage
           await chrome.storage.sync.set({ 
@@ -152,7 +152,7 @@ const Gamification = {
           // Начисляем награду за каждый пропущенный день
           let totalPoints = 0;
           for (let i = 1; i <= daysDiff; i++) {
-            const currentDay = days - daysDiff + i;
+            const currentDay = i; // День в последовательности (1, 2, 3...)
             let bonusPoints = 5; // базовая награда
             
             // Проверяем бонусы для каждого дня
