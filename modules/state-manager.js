@@ -5,7 +5,7 @@ const StateManager = {
   // Получение данных
   async get(keys) {
     try {
-      return await chrome.storage.sync.get(keys);
+      return await API.getStorage(keys);
     } catch (error) {
       console.error('Ошибка получения данных:', error);
       return {};
@@ -15,7 +15,7 @@ const StateManager = {
   // Сохранение данных
   async set(data) {
     try {
-      await chrome.storage.sync.set(data);
+      await API.setStorage(data);
     } catch (error) {
       console.error('Ошибка сохранения данных:', error);
     }

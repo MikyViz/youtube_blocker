@@ -1,26 +1,27 @@
 // ===== BACKGROUND SERVICE WORKER =====
 // Автоматическое начисление наград за дни без YouTube
 
-// Импорт модуля геймификации
+// Импорт модулей
+importScripts('modules/api-compatibility.js');
 importScripts('modules/gamification.js');
 
 // Проверка и начисление наград при старте браузера
-chrome.runtime.onStartup.addListener(async () => {
+API.onStartup(async () => {
   await checkAndRewardDiscipline();
 });
 
 // Проверка и начисление наград при установке расширения
-chrome.runtime.onInstalled.addListener(async () => {
+API.onInstalled(async () => {
   await checkAndRewardDiscipline();
 });
 
 // Слушаем открытие новых вкладок
-chrome.tabs.onCreated.addListener(async (tab) => {
+API.onTabCreated(async (tab) => {
   await checkAndRewardDiscipline();
 });
 
 // Слушаем активацию вкладок
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
+API.onTabActivated(async (activeInfo) => {
   await checkAndRewardDiscipline();
 });
 
@@ -29,11 +30,11 @@ async function checkAndRewardDiscipline() {
   try {
     // Проверка и обнуление счётчика времени при смене даты
     const todayDate = new Date().toDateString();
-    const dateCheck = await chrome.storage.sync.get(['lastYouTubeDate', 'youtubeTimeToday']);
+    const dateCheck = await API.getStorage(['lastYouTubeDate', 'youtubeTimeToday']);
     
     if (dateCheck.lastYouTubeDate !== todayDate && dateCheck.lastYouTubeDate) {
       // Новый день - обнуляем счётчик времени на YouTube
-      await chrome.storage.sync.set({
+      await API.setStorage({
         youtubeTimeToday: 0,
         lastYouTubeDate: todayDate
       });
@@ -54,14 +55,10 @@ async function checkAndRewardDiscipline() {
       
       let message = `${days} ${days === 1 ? 'день' : 'дней'} без YouTube!${bonusText}\n+${result.totalPoints} очков чести! Всего: ${result.score}`;
       
-      // Показываем Chrome notification
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/128_samurai.png',
-        title: title,
+      // Показываем уведомление
+      API.showNotification(title, {
         message: message,
-        priority: 2,
-        requireInteraction: true
+        icon: 'icons/128_samurai.png'
       });
       
       console.log(`✅ Награда начислена: +${result.totalPoints} очков за ${result.daysDiff} дней`);
@@ -72,15 +69,10 @@ async function checkAndRewardDiscipline() {
 }
 
 // Периодическая проверка каждый час
-chrome.alarms.create('checkDailyRewards', { periodInMinutes: 60 });
+API.setAlarm('checkDailyRewards', 60);
+API.setAlarm('midnightCheck', 1440);
 
-// Проверка каждый час в 00:00 (полночь)
-chrome.alarms.create('midnightCheck', { 
-  when: getMidnightTime(),
-  periodInMinutes: 1440 // каждые 24 часа
-});
-
-chrome.alarms.onAlarm.addListener((alarm) => {
+API.onAlarm((alarm) => {
   if (alarm.name === 'checkDailyRewards' || alarm.name === 'midnightCheck') {
     checkAndRewardDiscipline();
   }

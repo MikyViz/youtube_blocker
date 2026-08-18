@@ -36,17 +36,17 @@ async function loadStats() {
   try {
     // Проверка и обнуление счётчика при смене даты
     const today = new Date().toDateString();
-    const dateCheck = await chrome.storage.sync.get(['lastYouTubeDate', 'youtubeTimeToday']);
+    const dateCheck = await API.getStorage(['lastYouTubeDate', 'youtubeTimeToday']);
     
     if (dateCheck.lastYouTubeDate !== today && dateCheck.lastYouTubeDate) {
       // Новый день - обнуляем счётчик
-      await chrome.storage.sync.set({
+      await API.setStorage({
         youtubeTimeToday: 0,
         lastYouTubeDate: today
       });
     }
     
-    const result = await chrome.storage.sync.get([
+    const result = await API.getStorage([
       'youtubeTimeToday',
       'daysWithoutYouTube',
       'willpowerScore',
@@ -140,7 +140,7 @@ async function showPendingRewardNotification(data) {
     if (e.target.id === 'closeReward' || e.target.closest('#closeReward')) {
       console.log('Закрываем награду...');
       notification.remove();
-      await chrome.storage.sync.set({ pendingReward: null });
+      await API.setStorage({ pendingReward: null });
       console.log('Награда закрыта');
     }
   });
@@ -156,7 +156,7 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
   };
 
   try {
-    await chrome.storage.sync.set(settings);
+    await API.setStorage(settings);
     
     // Визуальная обратная связь
     const btn = document.getElementById('saveSettings');
@@ -178,7 +178,7 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
 document.getElementById('resetStats').addEventListener('click', async () => {
   if (confirm('Точно сбросить всю статистику?')) {
     try {
-      await chrome.storage.sync.set({
+      await API.setStorage({
         youtubeTimeToday: 0,
         daysWithoutYouTube: 0,
         willpowerScore: 0,
@@ -200,7 +200,7 @@ document.getElementById('panicMode').addEventListener('click', async () => {
   if (confirm('⚔️ Активировать режим железной воли?\n\nYouTube будет полностью заблокирован на 1 час!\n\n"Истинный самурай владеет собой в любой ситуации."')) {
     try {
       const panicEndTime = Date.now() + (60 * 60 * 1000); // +1 час
-      await chrome.storage.sync.set({
+      await API.setStorage({
         panicMode: true,
         panicEndTime: panicEndTime
       });

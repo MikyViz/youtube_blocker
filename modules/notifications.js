@@ -10,13 +10,13 @@ const Notifications = {
 
   // Проверка режима паники
   async checkPanicMode() {
-    const data = await chrome.storage.sync.get(['panicMode', 'panicEndTime']);
+    const data = await API.getStorage(['panicMode', 'panicEndTime']);
     
     if (data.panicMode && Date.now() < data.panicEndTime) {
       return true; // Режим паники активен
     } else if (data.panicMode && Date.now() >= data.panicEndTime) {
       // Режим паники истек
-      await chrome.storage.sync.set({
+      await API.setStorage({
         panicMode: false,
         panicEndTime: 0
       });
@@ -27,7 +27,7 @@ const Notifications = {
 
   // Проверка, нужно ли показывать уведомление
   async shouldNotify(sessionStartTime) {
-    const settings = await chrome.storage.sync.get([
+    const settings = await API.getStorage([
       'lastNotificationTime',
       'notificationInterval',
       'youtubeTimeToday',
@@ -67,7 +67,7 @@ const Notifications = {
 
   // Обновление времени последнего уведомления
   async updateLastNotificationTime() {
-    await chrome.storage.sync.set({
+    await API.setStorage({
       lastNotificationTime: Date.now()
     });
   },

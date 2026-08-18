@@ -12,6 +12,7 @@
     {
       "matches": ["*://*.youtube.com/*"],
       "js": [
+        "modules/api-compatibility.js",
         "modules/state-manager.js",
         "modules/gamification.js",
         "modules/ui-components.js",

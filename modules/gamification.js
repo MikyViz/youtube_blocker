@@ -22,7 +22,7 @@ const Gamification = {
 
   // Награда за дисциплину (день без YouTube)
   async rewardDiscipline() {
-    const data = await chrome.storage.sync.get(['willpowerScore', 'daysWithoutYouTube']);
+    const data = await API.getStorage(['willpowerScore', 'daysWithoutYouTube']);
     let score = parseInt(data.willpowerScore || '0');
     const days = parseInt(data.daysWithoutYouTube || '0');
 
@@ -44,7 +44,7 @@ const Gamification = {
     }
 
     score += bonusPoints;
-    await chrome.storage.sync.set({ willpowerScore: score });
+    await API.setStorage({ willpowerScore: score });
 
     return {
       score,
@@ -58,7 +58,7 @@ const Gamification = {
   // Сброс дней без YouTube (без штрафа, просто обнуление счётчика)
   async resetDaysWithoutYouTube() {
     const todayDate = new Date().toDateString();
-    await chrome.storage.sync.set({
+    await API.setStorage({
       daysWithoutYouTube: 0,
       lastVisitDate: todayDate // Сохраняем дату ПОСЕЩЕНИЯ YouTube
     });
@@ -66,12 +66,12 @@ const Gamification = {
 
   // Наказание за превышение лимита времени на YouTube
   async punishForYouTube() {
-    const data = await chrome.storage.sync.get(['willpowerScore']);
+    const data = await API.getStorage(['willpowerScore']);
     let score = parseInt(data.willpowerScore || '0');
     
     score = score - 10; // штраф за превышение лимита
     
-    await chrome.storage.sync.set({
+    await API.setStorage({
       willpowerScore: score,
       daysWithoutYouTube: 0 // сброс дней при превышении лимита
     });
@@ -108,12 +108,12 @@ const Gamification = {
 
   // Награда за закрытие сайта
   async rewardForClosing(timeSpent) {
-    const data = await chrome.storage.sync.get(['willpowerScore']);
+    const data = await API.getStorage(['willpowerScore']);
     let score = parseInt(data.willpowerScore || '0');
     
     score++; // +1 очко за самоконтроль
     
-    await chrome.storage.sync.set({ willpowerScore: score });
+    await API.setStorage({ willpowerScore: score });
 
     return {
       score,
@@ -124,7 +124,7 @@ const Gamification = {
 
   // Проверка дней без YouTube (автоматическое начисление наград)
   async checkDaysWithoutYouTube() {
-    const data = await chrome.storage.sync.get(['lastVisitDate', 'lastCheckDate', 'willpowerScore']);
+    const data = await API.getStorage(['lastVisitDate', 'lastCheckDate', 'willpowerScore']);
     const todayDate = new Date().toDateString();
     const lastVisitDate = data.lastVisitDate || '';
     const lastCheckDate = data.lastCheckDate || '';
@@ -143,7 +143,7 @@ const Gamification = {
           const days = daysDiff;
           
           // Обновляем дни в storage
-          await chrome.storage.sync.set({ 
+          await API.setStorage({ 
             daysWithoutYouTube: days,
             lastCheckDate: todayDate,
             pendingReward: true // ставим флаг ожидающей награды
@@ -168,7 +168,7 @@ const Gamification = {
           
           // Обновляем общие очки
           const currentScore = parseInt(data.willpowerScore || '0');
-          await chrome.storage.sync.set({ willpowerScore: currentScore + totalPoints });
+          await API.setStorage({ willpowerScore: currentScore + totalPoints });
           
           return {
             days,
@@ -181,7 +181,7 @@ const Gamification = {
       }
       
       // Обновляем дату проверки
-      await chrome.storage.sync.set({ lastCheckDate: todayDate });
+      await API.setStorage({ lastCheckDate: todayDate });
     }
 
     return null;
@@ -189,7 +189,7 @@ const Gamification = {
 
   // Проверка и показ отложенной награды (вызывается на любой странице)
   async checkAndShowPendingReward() {
-    const data = await chrome.storage.sync.get(['pendingReward', 'daysWithoutYouTube', 'willpowerScore']);
+    const data = await API.getStorage(['pendingReward', 'daysWithoutYouTube', 'willpowerScore']);
     
     if (data.pendingReward) {
       // Есть ожидающая награда - показываем её
@@ -208,7 +208,7 @@ const Gamification = {
       const message = `🎌 Твоя честь растёт, воин! ${days} дней на пути самурая.${bonusMessage}\n⚔️ Звание: ${rank}\n🏆 Очки чести: ${score}`;
       
       // Сбрасываем флаг награды
-      await chrome.storage.sync.set({ pendingReward: null });
+      await API.setStorage({ pendingReward: null });
       
       return {
         hasPendingReward: true,

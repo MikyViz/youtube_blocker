@@ -1,5 +1,5 @@
 // ===== REFACTORED CONTENT SCRIPT =====
-// Использование модульной архитектуры с chrome.storage.sync
+// Использование модульной архитектуры с API совместимости
 
 // Мотивационные сообщения в самурайском стиле
 const messages = [
@@ -58,11 +58,11 @@ async function startTimeTracking() {
   setInterval(async () => {
     try {
       const sessionTime = Date.now() - sessionStartTime;
-      const data = await chrome.storage.sync.get(['youtubeTimeToday']);
+      const data = await API.getStorage(['youtubeTimeToday']);
       const currentTotal = data.youtubeTimeToday || 0;
       
       // Обновляем общее время
-      await chrome.storage.sync.set({
+      await API.setStorage({
         youtubeTimeToday: currentTotal + sessionTime
       });
       
@@ -92,10 +92,10 @@ async function startTimeTracking() {
 async function handleBeforeUnload() {
   try {
     const sessionTime = Date.now() - sessionStartTime;
-    const data = await chrome.storage.sync.get(['youtubeTimeToday']);
+    const data = await API.getStorage(['youtubeTimeToday']);
     const currentTotal = data.youtubeTimeToday || 0;
     
-    await chrome.storage.sync.set({
+    await API.setStorage({
       youtubeTimeToday: currentTotal + sessionTime
     });
   } catch (error) {
@@ -107,11 +107,11 @@ async function handleBeforeUnload() {
 async function handleCloseClick() {
   try {
     const sessionTime = Date.now() - sessionStartTime;
-    const data = await chrome.storage.sync.get(['youtubeTimeToday']);
+    const data = await API.getStorage(['youtubeTimeToday']);
     const currentTotal = data.youtubeTimeToday || 0;
     const totalTime = currentTotal + sessionTime;
     
-    await chrome.storage.sync.set({
+    await API.setStorage({
       youtubeTimeToday: totalTime
     });
     
