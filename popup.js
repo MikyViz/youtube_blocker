@@ -54,7 +54,9 @@ async function loadStats() {
       'notificationInterval',
       'enableBlocking',
       'workingHoursOnly',
-      'pendingReward'
+      'pendingReward',
+      'panicMode',
+      'panicEndTime'
     ]);
 
     // Проверка отложенной награды
@@ -96,8 +98,36 @@ async function loadStats() {
     document.getElementById('notificationInterval').value = result.notificationInterval || 15;
     document.getElementById('enableBlocking').checked = result.enableBlocking !== false;
     document.getElementById('workingHoursOnly').checked = result.workingHoursOnly || false;
+
+    // Отображение статуса режима железной воли
+    await updatePanicStatus(result.panicMode, result.panicEndTime);
   } catch (error) {
     console.error('Ошибка загрузки данных:', error);
+  }
+}
+
+// Обновление отображения режима железной воли
+async function updatePanicStatus(panicMode, panicEndTime) {
+  const statusSection = document.getElementById('panicStatus');
+  const timeLeftElement = document.getElementById('panicTimeLeft');
+  const panicButton = document.getElementById('panicMode');
+
+  const isActive = panicMode && panicEndTime > Date.now();
+
+  if (isActive) {
+    statusSection.hidden = false;
+    timeLeftElement.textContent = formatTime(panicEndTime - Date.now());
+    panicButton.disabled = true;
+    panicButton.textContent = '⚔️ Уже активирован';
+  } else {
+    statusSection.hidden = true;
+    panicButton.disabled = false;
+    panicButton.textContent = '⚔️ Режим железной воли (1ч)';
+
+    // Сбрасываем флаг, если время истекло
+    if (panicMode) {
+      await API.setStorage({ panicMode: false });
+    }
   }
 }
 
@@ -204,9 +234,8 @@ document.getElementById('panicMode').addEventListener('click', async () => {
         panicMode: true,
         panicEndTime: panicEndTime
       });
-      
-      alert('⚔️ Режим железной воли активирован! Блокировка на 1 час.');
-      window.close();
+
+      await loadStats();
     } catch (error) {
       console.error('Ошибка активации режима паники:', error);
     }
